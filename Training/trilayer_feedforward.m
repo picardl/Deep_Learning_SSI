@@ -39,9 +39,6 @@ net.performFcn = 'crossentropy';
 %Choose random training, test and validations sets
 net.divideFcn = 'dividerand';
 
-%Plot performance during  training
-%net.plotFcns = {'plotperform'}; %REMOVE FOR CLUSTER
-
 net.trainParam.showWindow = false;
 
 %Set training parameters
