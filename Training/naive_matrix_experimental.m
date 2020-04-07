@@ -1,27 +1,19 @@
-%This script defines and evaluates three methods of optical lattice image
-%reconstruction, all based on fitting a Gaussian point spread function to
-%each site in a 3x3 segment. The methods are, in order of increasing
-%complexity: 
-%- simple weighted sum with threshold
-%- best fit with amplitudes of 9 Gaussians as parameters followed by a 
-%   threshold
-%- neural network initialized by expected intensity distributions for each of
-%the 512 possible occupation patterns on a 3x3 lattice.
-
+%This script implements four versions of optical lattice image
+%reconstruction, beginning with manual naive reconstruction, and building
+%on this method using three possible neural network architectures for image
+%classification.
 %Requires data files:
 %   params: struct containing imaging simulation parameters
 %   training_data.mat: .mat file containing arrays of simulated 3x3 lattice
 %       images and corresponding occupation patterns
 
-load_data %Script to load simulation data and parameters
-gen_PSF %Generate point spread function, or load it if already saved
+
+
+
 
 %-------------------------------------------------------------------------
-%FIND BEST CLASSIFICATION FIDELITY USING JUST PSF AND THRESHOLD
+%FIND BEST CLASSIFICATION FIDELITY USING JUST KNOWN PSF
 %-------------------------------------------------------------------------
-
-%Reshape normalised PSF to row vector
-PSF_row = reshape(PSF, 1, []);
 
 %Integer number of images making up approx 10% of dataset
 %Used to select subset of data for calculating generalisation error
@@ -66,6 +58,95 @@ GE = mean(abs(round(L2_GE) - GE_patt));
 fprintf('\nMax naive fidelity (training): %.3f\n', 100*(1-min_err))
 fprintf('Max naive fidelity (generalization): %.3f\n', 100*(1-GE))
 fprintf('\nWith layer weight of: %.3f\n', best_s)
+
+%-------------------------------------------------------------------------
+%CREATE AND TRAIN BILAYER NEURAL NETWORK
+%-------------------------------------------------------------------------
+
+%Create new network, with 1 visible and 1 hidden layer
+net  = network(1, 2, [0; 1], [1; 0], [0 0;1 0], [0 1]);
+
+%Define transfer functions for hidden and output layers
+net.layers{1}.transferFcn = 'purelin';
+net.layers{2}.transferFcn = 'logsig';
+
+net.inputs{1}.processFcns = {}; %No preprocessing function
+
+%Number of neurons in each layer
+net.input.size = size(training,1); %Number of elements in input vector
+net.layers{1}.size = 1;
+net.layers{2}.size = 1;
+
+%Initialise each layer individually
+net.initFcn = 'initlay';
+
+%Initialise weight matrices and bias vectors to naive values
+net.IW{1} = PSF_row;
+net.LW{2,1} = best_s;
+net.b{2} = -5;
+
+%Training algorithm
+net.trainFcn = 'traincgp';
+
+net.performFcn = 'crossentropy';
+
+%Choose random training, test and validations sets
+net.divideFcn = 'dividerand';
+
+%Plot performance during  training
+%net.plotFcns = {'plotperform'};
+
+net.trainParam.showWindow = false;
+
+%Set training parameters
+net.performParam.normalization = 'standard';
+net.performParam.regularization = 0;
+net.trainParam.epochs = 1000;
+net.trainParam.max_fail = 30;
+
+%Integer number of images making up approx 10% of dataset
+%Used to select subset of data for calculating generalisation error
+N_GE = round(N/10);
+
+%Generate N_GE random indices to remove from training data
+training_ind = linspace(1,N,N);
+GE_ind = randperm(N, N_GE);
+training_ind(GE_ind) = [];
+
+%Generate training and testing datasets
+training = pic_data(:, training_ind);
+target = nn_patts(:, training_ind);
+GE_pics = pic_data(:, GE_ind);
+GE_patt = nn_patts(:, GE_ind);
+
+%Configure neural net using first element of dataset as example
+%net = configure(net, training(:, 1), target(:, 1));
+
+breakout = 1; %counter to break out of while loop
+GE = 1; %Reset generalization error
+
+%Train neural network, retraining up to 5 times if performance is worse than naive
+while (GE > min_err) && (breakout < 6)
+
+	%Train neural network
+	[net, tr] = train(net, training, target);
+
+	%Determine generalisation error, with binary cost function rather than MSE
+	GE_test = net(GE_pics);
+	GE = mean(abs(round(GE_test) - GE_patt));
+
+	breakout = breakout + 1;
+end
+
+mean_fidel = (1 - GE)*100;
+
+fprintf('\Three-layer network fidelity (manual initialisation): %.3f\n', mean_fidel)
+fprintf('Best training performance: %.3f\n', tr.best_perf)
+fprintf('Best validation performance: %.3f\n', tr.best_vperf)
+fprintf('Best testing performance: %.3f\n\n', tr.best_tperf)
+
+save three_layer_net net
+
 
 %-------------------------------------------------------------------------
 %FIND MAXIMUM FIDELITY USING GAUSSIAN FIT
@@ -255,3 +336,67 @@ save gaussian_net net
 
 clear('pic_data', 'training', 'target')
 
+%-------------------------------------------------------------------------
+%CREATE CONVOLUTIONAL NEURAL NETWORK
+%-------------------------------------------------------------------------
+%Generate N_GE random indices to remove from training data
+N_val = round(N/5);
+val_perm = randperm(size(training_ind,2), N_val);
+val_ind = training_ind(val_perm);
+training_ind(val_perm) = [];
+
+GE_ind = val_ind(1:round(0.2*N_val));
+val_ind((N_val-round(0.2*N_val)):end) = [];
+
+%Generate training and validation datasets
+training = square_pics(:,:,1, training_ind);
+target = categorical(nn_patts(:, training_ind));
+val_pics = square_pics(:,:,1, val_ind);
+val_patt = categorical(nn_patts(:, val_ind));
+validation_set = {val_pics,val_patt};
+
+GE_pics = square_pics(:,:,1, GE_ind);
+GE_patt = nn_patts(:, GE_ind);
+
+%Define architecture of convolutional neural net
+layers = [
+    imageInputLayer([dim1 dim1 1])
+    
+    convolution2dLayer(filtersize,numfilters)
+    batchNormalizationLayer
+    reluLayer
+    
+    averagePooling2dLayer(poolsize,'Stride',stride)
+    
+    convolution2dLayer(filtersize,numfilters*2)
+    batchNormalizationLayer
+    reluLayer
+    
+    averagePooling2dLayer(poolsize,'Stride',stride)
+    
+    convolution2dLayer(filtersize,numfilters*5)
+    batchNormalizationLayer
+    reluLayer
+    
+    fullyConnectedLayer(2)
+    softmaxLayer
+    classificationLayer];
+
+options = trainingOptions('sgdm', ...
+    'InitialLearnRate',0.01, ...
+    'MaxEpochs',4, ...
+    'Shuffle','every-epoch', ...
+    'ValidationData',validation_set, ...
+    'ValidationFrequency',30, ...
+    'Verbose',true, 'VerboseFrequency', 500);
+
+net = trainNetwork(training,target,layers,options);
+
+GE_out = classify(net, GE_pics);
+binary_out = grp2idx(GE_out) - 1;
+errs = abs(binary_out' - GE_patt);
+fidelity = 1 - mean(errs);
+
+fprintf('\nConvolutional neural network fidelity: %.3f\n\n', fidelity*100)
+
+save convolutional_net net

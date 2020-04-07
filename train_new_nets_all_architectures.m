@@ -1,22 +1,19 @@
-function train_new_net_clst(param_path)
-%This script simulates a set of training images and uses them to train an
-%autoencoder network to reduce the dimensionality of the data and a
-%feedforward network to classifiy central sites as occupied or unoccupied
+function train_new_nets_all_architectures(param_path)
+%This script simulates a set of training images and uses them to train a
+%series of models to classify 3x3 lattice 
 
 %The script generates the following .mat data files:
-%     neural_net_training_data - containing training images and
-%       corresponding 3 by 3 lattice occupation patterns
-%     weights_3by3 - containing fine-tuned layer weights for autoencoder,
-%       where w1-w4 are encoding layers and w5-w8 are decoding.
-%     classifier_net - containing a trained neural network object for encoded 
-%       image classification
-%     error_3by3 - containing test and training errors of the autoencoder 
-%       for each training batch
+%     training_data - training images and corresponding 3 by 3 lattice 
+%       occupation patterns
+%     pointspreadfunction - empirical isolated atom PSF
+%     gaussian_net - trained neural network model based fitting
+%       gaussians to all 512 possible lattice configurations
+%     three_layer_net - trained three-layer feedforward classifier
+%     convolutional_net - trained convolutional network classifier
 
-%clear all
 close all 
 
-load(param_path);
+load param_path params
 cd(params.savefolder)
 
 disp(params)
@@ -24,13 +21,12 @@ disp(params)
 %Generate training data
 sim_3by3_clst(params)
 
-%Determine threshold for naive reconstruction and display naive fidelity
-naive_matrix_experimental
+%Train naive, gauss fit and gauss net models. Save gauss net
+gauss_naive_and_net
 
-%Train and save autoencoder
-%deepauto
+%Train and save feedforward three-layer network
+trilayer_feedforward
+
+%Train and save convolutional neural network
 
 clear pic_data
-
-%Train and save classifier
-%classifier_integrated

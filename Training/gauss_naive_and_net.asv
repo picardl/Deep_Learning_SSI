@@ -1,13 +1,4 @@
-%This script defines and evaluates three methods of optical lattice image
-%reconstruction, all based on fitting a Gaussian point spread function to
-%each site in a 3x3 segment. The methods are, in order of increasing
-%complexity: 
-%- simple weighted sum with threshold
-%- best fit with amplitudes of 9 Gaussians as parameters followed by a 
-%   threshold
-%- neural network initialized by expected intensity distributions for each of
-%the 512 possible occupation patterns on a 3x3 lattice.
-
+%This script defines and evaluates .
 %Requires data files:
 %   params: struct containing imaging simulation parameters
 %   training_data.mat: .mat file containing arrays of simulated 3x3 lattice
@@ -17,7 +8,7 @@ load_data %Script to load simulation data and parameters
 gen_PSF %Generate point spread function, or load it if already saved
 
 %-------------------------------------------------------------------------
-%FIND BEST CLASSIFICATION FIDELITY USING JUST PSF AND THRESHOLD
+%FIND BEST CLASSIFICATION FIDELITY USING JUST KNOWN PSF
 %-------------------------------------------------------------------------
 
 %Reshape normalised PSF to row vector
