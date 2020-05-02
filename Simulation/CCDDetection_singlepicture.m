@@ -80,7 +80,3 @@ end
 %view(0,90);
 %figure(2)
 %image(pattern*63)
-
-
-
-

@@ -16,7 +16,7 @@ val_perm = randperm(size(training_ind,2), N_val);
 val_ind = training_ind(val_perm);
 training_ind(val_perm) = [];
 
-%Set aside another 5th of those images for post-training generalization
+%Set aside another 20% of those images for post-training generalization
 %error test
 GE_ind = val_ind(1:round(0.2*N_val));
 val_ind((N_val-round(0.2*N_val)):end) = [];

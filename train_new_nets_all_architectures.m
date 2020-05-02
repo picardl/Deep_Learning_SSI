@@ -1,6 +1,6 @@
 function train_new_nets_all_architectures(param_path)
 %This script simulates a set of training images and uses them to train a
-%series of models to classify 3x3 lattice 
+%series of models to classify 3x3 lattice images
 
 %The script generates the following .mat data files:
 %     training_data - training images and corresponding 3 by 3 lattice 
@@ -28,5 +28,6 @@ gauss_naive_and_net
 trilayer_feedforward
 
 %Train and save convolutional neural network
+convolutional
 
 clear pic_data

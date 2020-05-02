@@ -174,8 +174,8 @@ init_L1(1,257:512) = 1;
 %Initialize layer 1 bias to zero
 net.b{1} = zeros(512,1);
 
-%Initialise weight matrices and layer 2 bias vector to naive values
-
+%Initialise each row of input weight matrix to a different distribution of
+%PSFs across the lattice sites
 combs = dec2base(0:power(2,9) - 1,2) - '0';
 empty = combs(combs(:,5) == 0,:);
 filled = combs(combs(:,5) == 1,:);
@@ -183,7 +183,6 @@ all_input_weights = zeros(512,round(3*pixelspersite)^2);
 indices = repmat(1:9,256,1);
 empty = empty.*indices;
 filled = filled.*indices;
-
 for i = 1:256
     mat1_all = site_specific_PSF(:,:,nonzeros(empty(i,:)));
     mat1_sum = sum(mat1_all, 3);
@@ -200,15 +199,14 @@ net.b{2} = 1;
 %Training algorithm
 net.trainFcn = 'traincgp';
 
-net.performFcn = 'crossentropy';
+net.performFcn = 'crossentropy'; %Loss function
 
 %Choose random training, test and validations sets
 net.divideFcn = 'dividerand';
 
 %Plot performance during  training
 %net.plotFcns = {'plotperform'};
-
-net.trainParam.showWindow = false;
+net.trainParam.showWindow = false; %Do not try to use GUI on cluster
 
 %Set training parameters
 net.performParam.normalization = 'standard';
@@ -230,12 +228,6 @@ training = pic_data(:, training_ind);
 target = nn_patts(:, training_ind);
 GE_pics = pic_data(:, GE_ind);
 GE_patt = nn_patts(:, GE_ind);
-
-%Configure neural net using first element of dataset as example
-%net = configure(net, training(:, 1), target(:, 1));
-
-breakout = 1; %counter to break out of while loop
-GE = 1; %Reset generalization error
 
 %Train neural network
 [net, tr] = train(net, training, target);
