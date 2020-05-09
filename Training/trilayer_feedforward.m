@@ -20,7 +20,7 @@ net.layers{2}.transferFcn = 'logsig';
 net.inputs{1}.processFcns = {}; %No preprocessing function
 
 %Number of neurons in each layer
-net.input.size = size(training,1); %Number of elements in input vector
+net.input.size = size(pic_data,1); %Number of elements in input vector
 net.layers{1}.size = 1;
 net.layers{2}.size = 1;
 

@@ -1,20 +1,55 @@
-function train_new_nets_all_architectures(param_path)
-%This script simulates a set of training images and uses them to train a
-%series of models to classify 3x3 lattice 
+function train_new_nets_all_architectures(reps, binarize, NA, latticespacing, imagingpulse, lossrate, recoilvel, scatteringrate, pixelspersite, atomicmass, lambda, addnoise, collectedphotonsratio, latticedepth, poolsize, stride, filtersize, numfilters)
 
-%The script generates the following .mat data files:
-%     training_data - training images and corresponding 3 by 3 lattice 
-%       occupation patterns
-%     pointspreadfunction - empirical isolated atom PSF
-%     gaussian_net - trained neural network model based fitting
-%       gaussians to all 512 possible lattice configurations
-%     three_layer_net - trained three-layer feedforward classifier
-%     convolutional_net - trained convolutional network classifier
+rng('shuffle') %Seed random number generator
+jobid = datestr(clock, 'ddmmmyy_HHMMSS'); %Job ID as datetime
+jobname = sprintf('nn_all_architectures_%s', jobid);
 
-close all 
+workdir = pwd; %working directory
 
-load param_path params
+%Folder to save output data
+params.savefolder = strcat(workdir,'/',jobname);
+
+system(sprintf('mkdir "%s"', params.savefolder));
+
+params.savefolder = strcat(params.savefolder,'/');
+
+%Number of copies of each occupation pattern to be simulated for training
+%data
+params.reps = reps;
+
+%Set simulation parameters
+params.NA = NA; %Numerical aperture
+params.latticespacing = latticespacing; %in nm
+params.imagingpulse = imagingpulse; %in s
+params.lossrate = lossrate; %loss probability per scattering event
+params.recoilvel = recoilvel; %scattering recoil velocity in m / s
+params.scatteringrate = scatteringrate; %per s
+params.pixelspersite = pixelspersite; %Distance between lattice sites in px
+params.atomicmass = atomicmass; %Mass in amu of lattice atom
+params.lambda = lambda; %Imaging wavelength
+params.addnoise = addnoise; %Noise intensity (0 to 1)
+params.collectedphotonsratio = collectedphotonsratio; %Fraction of photons which are collected by CCD
+params.binarize = binarize; %True if images are to be binarized, false otherwise
+params.latticedepth = latticedepth; %Depth of pinning lattice, in units of E_r
+params.poolsize = poolsize; %Convolutional pooling size
+params.stride = stride; %Convolutional pooling stride
+params.filtersize = filtersize; %Convolutional filter size
+params.numfilters = numfilters; %Convolutional numfilters
+
+% the parameters structure is done, save it to file
+param_filename = sprintf('params_%s.mat', jobname);
+param_path = strcat(params.savefolder,param_filename);
+save(param_path, 'params');
+
+%Make sure all folders in working directory are in path
+addpath(genpath(pwd))
+
+%Change to new working directory
 cd(params.savefolder)
+
+%Create log file and start logging output
+logfile = sprintf('nn_log_%s', jobid);
+diary(logfile)
 
 disp(params)
 
@@ -28,5 +63,8 @@ gauss_naive_and_net
 trilayer_feedforward
 
 %Train and save convolutional neural network
+convolutional
 
 clear pic_data
+diary off
+

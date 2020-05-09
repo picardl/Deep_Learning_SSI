@@ -7,7 +7,15 @@
 %       images and corresponding occupation patterns
 
 load_data %Script to load simulation data and parameters
-gen_PSF %Generate point spread function, or load it if already saved
+
+%Integer number of images making up approx 10% of dataset
+%Used to select subset of data for calculating generalisation error
+N_GE = round(N/10);
+
+%Generate N_GE random indices to remove from training data
+training_ind = linspace(1,N,N);
+GE_ind = randperm(N, N_GE);
+training_ind(GE_ind) = [];
 
 %Generate N_val random indices to remove from training data for validation
 %and testing
