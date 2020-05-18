@@ -1,17 +1,30 @@
-%This script is designed to test lattice reconstruction using simulated
+%This script is designed to test lattice reconstruction for pretrained networks using simulated
 %images
 
 %Path to saved neural network
-net_path_1 = 'C:\Users\lewis\Documents\Current Work\Innsbruck HR Imaging\Reconstruction\convolutional_net.mat';
-net_path_2 = 'C:\Users\lewis\Documents\Current Work\Innsbruck HR Imaging\Trained Neural Nets\erbium_266_1-5us\classifier_net.mat';
-net_path_3 = 'C:\Users\lewis\Documents\Current Work\Innsbruck HR Imaging\Trained Neural Nets\erbium_266_1-5us\single_visible_net.mat';
+net_paths = {};
 
-min_confidence = 0.5;
-load 'C:\Users\lewis\Documents\Current Work\Innsbruck HR Imaging\Trained Neural Nets\erbium_266_1-5us\params_nn_integrated_id3300.mat'
+%Add as many networks as we want to test
+net_paths{end+1} = '{user_path}\test_net.mat';
+net_paths{end+1} = '{user_path}\test_net.mat';
+net_paths{end+1} = '{user_path}\test_net.mat';
+num_nets = length(net_paths);
+
+%Number of different filling fractions in which to test network
+fraction_filled = [0.5, 0.9]; %Fraction of lattice sites occupied
+num_conditions = length(fraction_filled);
+
+min_confidence = 0.5; %Minimum confidence for positive reconstruction classification, in range 0.5 - 1
+
+%Load saved simulation params. Alternatively they can be manually defined
+%below
+param_path = "{user_path}\params.mat";
+load(param_path, 'params')
+
+
 %SIMULATION PARAMETERS 
 sites = 10; %simulated pattern has dimensions sites x sites
-fraction_filled = [0.1 0.5 0.9]; %Fraction of lattice sites occupied
-num_pics = 5; %Number of pictures to simulate in each batch
+num_pics = 2; %Number of pictures to simulate in each batch
 NA = params.NA; %Numerical aperture
 latticespacing = params.latticespacing; %in nm
 imagingpulse = params.imagingpulse; %in s
@@ -24,15 +37,17 @@ lambda = params.lambda; %Imaging wavelength
 addnoise = params.addnoise; %Noise intensity (0 to 1)
 collectedphotonsratio = params.collectedphotonsratio;
 
-%Number of different conditions in which to test network
-num_conditions = 3;
+
 
 %SIMULATE IMAGES AND RECONSTRUCT OCCUPATIONS
 
-%Array to hold fidelities
-fidelities_1 = zeros(num_conditions, 1);
-fidelities_2 = zeros(num_conditions, 1);
-fidelities_3 = zeros(num_conditions, 1);
+%Cell array to hold fidelities and reconstruction outputs
+fidelities = {};
+binary_recons = {};
+sigmoid_recons = {};
+confidence_recons = {};
+recons_lists = {};
+
 
 for i=1:num_conditions
     
@@ -61,32 +76,35 @@ for i=1:num_conditions
         pixelspersite, pixelspersite, pixelspersite, mask);
     
     %Reconstruct lattice
-    [binary_1, ~, ~] = reconstruct_lattice(test_pics, lattice_coords, lattice_indices,...
-        pixelspersite, 0.5, net_path_1, true, -1);
-    fidelities_1(i) = 1 - mean(mean(mean(abs(binary_1 - patterns))));
-    
-    [binary_2, ~, ~] = reconstruct_lattice(test_pics, lattice_coords, lattice_indices,...
-        pixelspersite, 0.5, net_path_2, true, -1);
-    fidelities_2(i) = 1 - mean(mean(mean(abs(binary_2 - patterns))));
-    
-    [binary_3, ~, ~] = reconstruct_lattice(test_pics, lattice_coords, lattice_indices,...
-        pixelspersite, 0.5, net_path_3, true, -1);
-    fidelities_3(i) = 1 - mean(mean(mean(abs(binary_3 - patterns))));
-end
-    
-all_fidels = [fidelities_1(1:num_conditions),fidelities_2(1:num_conditions),fidelities_3(1:num_conditions)];
-b = bar(fraction_filled, all_fidels*100, 0.9);
-b(1).FaceColor = [0.12 0.56 1];
-b(2).FaceColor = [1 0.6 0];
-b(3).FaceColor = [1 0.9 0.3];
-ylim([85, 100]);
-xlim([0,1]);
-ax = gca;
-ax.YTick = [90 95 100];
-ax.XTick = [0.1 0.3 0.5 0.7 0.9];
-xlabel('Lattice filling fraction');
-ylabel('Reconstruction fidelity (%)');
-legend('Convolutional', 'Autoencoder', 'Three-layer');
+    for j = 1:num_nets
+        [binary_recons{j,i}, sigmoid_recons{j,i}, confidence_recons{j,i},recons_lists{j,i}] =...
+            reconstruct_lattice(test_pics, lattice_coords, lattice_indices,...
+            pixelspersite, 0.5, net_paths{j}, true, -1);
+        fidelities{j,i} = 1 - mean(mean(mean(abs(binary_recons{j,i} - patterns))));
+    end
 
-auto_falsepos = 1 - mean(mean(mean(abs(binary_1 - patterns))));
+end
+
+disp('Fidelities of all networks tested (rows) in each condition (columns):')
+disp(fidelities)
+
+%Plot fidelities for different filling fractions
+if length(fraction_filled) > 1
+    cat_fidels = zeros(num_conditions, num_nets);
+    for i = 1:num_nets
+        for j = 1:num_conditions
+            cat_fidels(j,i) = fidelities{i,j};
+        end
+    end
+    bar(fraction_filled, cat_fidels*100, 0.9);
+    ylim([85, 100]);
+    xlim([0,1]);
+    ax = gca;
+    ax.YTick = [90 95 100];
+    ax.XTick = [0.1 0.3 0.5 0.7 0.9];
+    xlabel('Lattice filling fraction');
+    ylabel('Reconstruction fidelity (%)');
+    %legend();
+end
+
         

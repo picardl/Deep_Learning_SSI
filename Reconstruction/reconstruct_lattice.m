@@ -42,9 +42,9 @@ function [binary_reconstruction, sigmoid_reconstruction, confidence_reconstructi
 %#function network 
 
 try
-    load(neural_net_path, net);
+    load(neural_net_path, 'net');
 catch
-    error('There is no net object, please check path contains a MATLAB neural network object named net');
+    warning('Failed to load net object, please check path contains a MATLAB neural network object named net');
 end
 
 %Get input size from either convolutional or network object
@@ -69,7 +69,8 @@ elseif min_confidence > 1
     disp('Confidence should be in range [0.5 1]. Rounding to 0.99')
 end
 
-%Binarize or normalize images, depending on input switch
+%Binarize or normalize images, depending on input switch (Normalization
+%comes later)
 if binarize
     images(images > 0) = 1;
 end
@@ -89,8 +90,12 @@ for i = 1:N %Loop over all images
         ycord = lattice_coords(j,2);
         
         %Create 3-by-3 site image segment
-        im_segment = images(round(ycord - round(3*spacing/2) + 1):round(ycord + round(3*spacing/2)),...
-            round(xcord - round(3*spacing)/2 + 1):round(xcord + round(3*spacing)/2), i);
+        try
+            im_segment = images(round(ycord - round(3*spacing/2) + 1):round(ycord + round(3*spacing/2)),...
+                round(xcord - round(3*spacing)/2 + 1):round(xcord + round(3*spacing)/2), i);
+        catch
+            error('Unable to slice image segment. Ensure that for all lattice coordinates there is a border of at least 1.5 lattice spacings before the edge of the image')
+        end
         
         %Reshape segment to vector for input to network
         im_vec = reshape(im_segment, [], 1);
@@ -99,7 +104,7 @@ for i = 1:N %Loop over all images
         end
         
         if size(im_vec) ~= inputsize
-            disp('ERROR: Wrong input size');
+            error('Wrong input size');
         end
         
         %Normalise image segment
