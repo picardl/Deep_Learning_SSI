@@ -15,7 +15,9 @@ function [binary_reconstruction, reconstruction_list] = reconstruct_lattice_gaus
 %   lattice_indices: N-by-2 array containing unique index of lattice sites
 %           corresponding to coordinates in the same row of lattice_coords
 %           in [row col] format.
+%   PSFwidth: float, width of Gaussian PSF fit
 %   spacing: Lattice spacing, in pixels
+%   threshold: float, threshold Gaussian fit amplitude for reconstruction
 %   binarize: boolean, if true preprocess image by setting all pixels with
 %           values greater than 0 to 1. Choice of this input depends on
 %           whether network was trained with binary or continuous images.
@@ -25,7 +27,9 @@ function [binary_reconstruction, reconstruction_list] = reconstruct_lattice_gaus
 %Returns:
 %   binary_reconstruction: Array containing reconstructed images as a stack
 %           of binary arrays.
-
+%   reconstruction_list: 2D array containing reconstruction outputs, where
+%       first dimension is index in lattice coordinate vector and second
+%       dimension is index of input image.
 
 %Binarize or normalize images, depending on input switch
 if binarize
