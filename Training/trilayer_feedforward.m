@@ -74,7 +74,7 @@ GE = mean(abs(round(GE_test) - GE_patt));
 
 mean_fidel = (1 - GE)*100;
 
-fprintf('\Three-layer network fidelity (manual initialisation): %.3f\n', mean_fidel)
+fprintf('\n Three-layer network fidelity (manual initialisation): %.3f\n', mean_fidel)
 fprintf('Best training performance: %.3f\n', tr.best_perf)
 fprintf('Best validation performance: %.3f\n', tr.best_vperf)
 fprintf('Best testing performance: %.3f\n\n', tr.best_tperf)

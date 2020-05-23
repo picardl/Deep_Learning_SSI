@@ -3,8 +3,9 @@
 %of 9 Gaussians (state of the art method without deep learning)
 %Paths of network, saved point spread function and simulation parameters files must be manually specified
 
-threshold = 0.107; %Threshold fit amplitude for Gaussian reconstruction
-bPlot = 0; %Bool determining whether to plot Gaussian fit for each segment
+%Threshold fit amplitude for Gaussian reconstruction, should be found by
+%training (see gauss_naive_and_net.m)
+threshold = 0.107; 
 
 %Path to saved neural network
 net_paths = {};

@@ -91,8 +91,8 @@ for i = 1:N %Loop over all images
         
         %Create 3-by-3 site image segment
         try
-            im_segment = images(round(ycord - round(3*spacing/2) + 1):round(ycord + round(3*spacing/2)),...
-                round(xcord - round(3*spacing)/2 + 1):round(xcord + round(3*spacing)/2), i);
+            im_segment = images(round(ycord - 3*spacing/2 + 1):round(ycord + 3*spacing/2),...
+                round(xcord -  3*spacing/2 + 1):round(xcord + 3*spacing/2), i);
         catch
             error('Unable to slice image segment. Ensure that for all lattice coordinates there is a border of at least 1.5 lattice spacings before the edge of the image')
         end
