@@ -1,30 +1,48 @@
-%This script is used to test the various lattice alignment processes
-%required to process real lattice images.
-%Simulate a set of lattice pictures with given paramters, find angle and
-%spacing, rotate and align and generate lattice coordinates.
+ function [ all_pictures_rot, all_patterns, all_pictures_nonrot ] = simulate_and_rotate(sitelength, n, angle, pixelspersite, NA, latticespacing, imagingpulse, lossrate, recoilvel, scatteringrate, atomicmass, lambda, addnoise, collectedphotonsratio, latticedepth)
+%Simulates n square lattice images for a given pattern of occupied / unoccupied
+%sites and then rotates them by a given angle, returns images in a 3-dimensional array of height n
+% 
+% 	Inputs: sitelength - edge length of square lattice to simulate, in
+%               number of sites
+%           n - number of images to simulate
+%           angle - angle (in deg) through which to rotate images after
+%               simulation
+% 			pixelspersite – width of site in pixels.
+% 			n – number of pictures to simulate.
+%           NA - numerical aperture (between 0 and 1)
+%           latticespacing - distance between neighbouring lattice sites,
+%           in nm
+%           imagingpulse - length of imaging laser pulse, in s
+%           scatteringrate - rate at which atoms scatter photons, in s^-1
+%           lossrate - probability of atom loss in every scattering event
+%           recoilvel - atom recoil velocity from scattering in m/s
+%           collectedphotonsratio - fraction of scattered photons which are
+%               collected on CCD
+%           latticedepth - Depth of pinning lattice, in Hz
+% 
+% 	Outputs:
+%           all_pictures_rot – 3D matrix, containing all simulated pictures,
+%               rotated by specified angle.
+%           all_patterns – 3D matrix of binary patterns from which pictures
+%               were simulated
+%           all_pictures_nonrot – 3D matrix, containing all unrotated
+%               pictures
+all_pictures_nonrot = zeros(sitelength*pixelspersite,sitelength*pixelspersite,n);
+all_patterns = zeros(sitelength,sitelength,n);
 
-sites = 10; %simulated pattern has dimensions sites x sites
-fraction_filled = 0.3;
-init_angle = 22; %in degrees
-n_pics = 50;
-NA = 0.85; %Numerical aperture
-latticespacing = 256; %in nm
-imagingpulse = 3e-6; %in s
-lossrate = 1e-4; %loss probability per scattering event
-recoilvel = 5.9e-3; %scattering recoil velocity in m / s
-scatteringrate = 2*pi*30e6; %per s
-pixelspersite = 20; %Distance between lattice sites in px
-atomicmass = 168; %Mass in amu of lattice atom
-lambda = 401; %Imaging wavelength
-AddNoise = 0.005; %Noise intensity (0 to 1)
-
-angle = 20; %Angle of rotation of lattice with respect to image
-
-%3 dimensional array containing simulated pictures, associated lattice patterns and PSF
-%[sim_pics, sim_patterns, PSFwidth] = simulate_npictures(sites, fraction_filled, angle, pixelspersite, n_pics, NA, latticespacing, imagingpulse, lossrate, recoilvel, scatteringrate, atomicmass, lambda, AddNoise);
-
-%[angle, spacing] = find_angle_and_spacing(sim_pics, sites, pixelspersite, latticespacing, fraction_filled, init_angle);
-
-[ crop_pics, x_offset, y_offset, mask ] = rotate_and_align(sim_pics, angle, spacing);
-
-[ lattice_coords, lattice_indices ] = gen_lattice( crop_pics(:,:,1), spacing, x_offset, y_offset, mask); %Generate lattice site coordinates
+    for i = 1:n
+        %Generate random pattern and simulate
+        all_patterns(:,:,i) = randi(2,sitelength,sitelength) - 1;
+        all_pictures_nonrot(:,:,i) = simulate_setpattern( all_patterns(:,:,i), pixelspersite, 1, NA, latticespacing, imagingpulse, lossrate, recoilvel, scatteringrate, atomicmass, lambda, addnoise, collectedphotonsratio, latticedepth);
+        
+        %Rotate through angle specified leaving dark border around edges
+        rotpic = imrotate(all_pictures_nonrot(:,:,i),angle,'loose'); 
+        
+        %Stack rotated pictures in matrix
+        if i == 1
+            all_pictures_rot = rotpic;
+        else
+            all_pictures_rot = cat(3,all_pictures_rot,rotpic);
+        end
+    end
+end

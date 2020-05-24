@@ -28,8 +28,8 @@ SNR_guess = 5; %Estimate of signal to noise ratio, used for determining image bo
 %3 dimensional array containing simulated pictures, associated lattice patterns and PSF
 [sim_pics, sim_patterns, PSFwidth] = simulate_npictures(sites, fraction_filled, angle, pixelspersite, n_pics, NA, latticespacing, imagingpulse, lossrate, recoilvel, scatteringrate, atomicmass, lambda, addnoise,collectedphotonsratio, 435);
 
-%[angle, spacing] = find_angle_and_spacing(sim_pics, sites, pixelspersite, latticespacing, fraction_filled, init_angle);
-angle = 0; spacing = 5;
+[angle, spacing] = find_angle_and_spacing(sim_pics, sites, pixelspersite, latticespacing, fraction_filled, init_angle);
+% angle = 0; spacing = 5;
 
 [ crop_pics, x_offset, y_offset, mask ] = rotate_and_align(sim_pics, angle, spacing, 5);
 
